@@ -24,7 +24,6 @@ def login():
     if st.button("Login"):
         if user == "mentor" and pwd == "123":
             st.session_state.login = True
-            st.success("Login Successful")
             st.rerun()
         else:
             st.error("Invalid login")
@@ -39,14 +38,35 @@ st.title("🎓 Smart AI Fee Tracking System")
 # ---------------- TESSERACT ----------------
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-# ---------------- FEE FUNCTION ----------------
+# ---------------- FEE STRUCTURE ----------------
 def get_fees(category):
-    if category == "Counselling":
-        return {"Tuition": 60000, "Bus": 40000, "Training": 25000}
-    elif category == "Management":
-        return {"Tuition": 80000, "Bus": 40000, "Training": 8000}
-    elif category == "Scholarship":
-        return {"Exam": 2000}
+    if category == "Management":
+        return {
+            "Tuition Fee": {"total": 50000, "type": "split"},
+            "Skill Development": {"total": 150000, "type": "split"},
+            "Hostel Fee": {"total": 83000, "type": "split"},
+            "Bus Fee": {"total": 40000, "type": "split"},
+            "Exam Fee": {"total": 5600, "type": "full"}
+        }
+
+    elif category == "Counselling":
+        return {
+            "Tuition Fee": {"total": 90000, "type": "split"},
+            "Skill Development": {"total": 65000, "type": "split"},
+            "Hostel Fee": {"total": 83000, "type": "split"},
+            "Bus Fee": {"total": 40000, "type": "split"},
+            "Exam Fee": {"total": 5600, "type": "full"}
+        }
+
+    elif category == "First Graduate":
+        return {
+            "Tuition Fee": {"total": 65000, "type": "split"},
+            "Skill Development": {"total": 65000, "type": "split"},
+            "Hostel Fee": {"total": 83000, "type": "split"},
+            "Bus Fee": {"total": 40000, "type": "split"},
+            "Exam Fee": {"total": 5600, "type": "full"}
+        }
+
     return {}
 
 # ---------------- STUDENTS ----------------
@@ -78,23 +98,32 @@ if "students" not in st.session_state:
         {"name": "KAMALI J", "roll": "711523BAM025", "category": "Management"},
         {"name": "KARTHICK M", "roll": "711523BAM026", "category": "Management"},
         {"name": "KAVYA G", "roll": "711523BAM027", "category": "Management"},
-        {"name": "MALATHI K", "roll": "711523BAM028", "category": "Management"},
+
+        # 🔥 SPECIAL CASE (MULTI CATEGORY)
+        {"name": "MALATHI K", "roll": "711523BAM028",
+         "categories": ["Counselling", "First Graduate"]},
+
         {"name": "MOHANKUMAR S", "roll": "711523BAM029", "category": "Management"},
         {"name": "MOHANRAJ S", "roll": "711523BAM030", "category": "Management"},
         {"name": "MONICA AISHWARYA R", "roll": "711523BAM031", "category": "Management"},
         {"name": "MUKESH KUMAR K", "roll": "711523BAM032", "category": "Management"},
+
         {"name": "NITHISH KUMAR N", "roll": "711523BAM034", "category": "Management"},
         {"name": "PANDI HARSHAN K", "roll": "711523BAM035", "category": "Management"},
         {"name": "PANDU RANG S", "roll": "711523BAM036", "category": "Management"},
         {"name": "PRADEEPAN L", "roll": "711523BAM037", "category": "Management"},
         {"name": "PRAKASH P", "roll": "711523BAM038", "category": "Management"},
-        {"name": "PRIYANGA G", "roll": "711523BAM039", "category": "Management"},
+
+        # 🔥 COUNSELLING STUDENTS
+        {"name": "PRIYANGA G", "roll": "711523BAM039", "category": "Counselling"},
+
         {"name": "RAGA T", "roll": "711523BAM040", "category": "Management"},
         {"name": "RUTHRAYINI M", "roll": "711523BAM041", "category": "Management"},
         {"name": "SACHIN D", "roll": "711523BAM042", "category": "Management"},
         {"name": "SANDHIYA V S", "roll": "711523BAM043", "category": "Management"},
         {"name": "SANJAI VEERAN S", "roll": "711523BAM044", "category": "Management"},
         {"name": "SANJAY S", "roll": "711523BAM045", "category": "Management"},
+
         {"name": "SARIKAA SHREE V", "roll": "711523BAM046", "category": "Management"},
         {"name": "SARVESH RAM A", "roll": "711523BAM047", "category": "Management"},
         {"name": "SATHYA R S", "roll": "711523BAM048", "category": "Management"},
@@ -113,6 +142,8 @@ if "students" not in st.session_state:
         {"name": "VISWA S S", "roll": "711523BAM061", "category": "Management"},
         {"name": "YOGESH PRIYAN P", "roll": "711523BAM062", "category": "Management"},
         {"name": "YUVANRAJ K S", "roll": "711523BAM063", "category": "Management"},
+
+        # LATERAL / OTHER
         {"name": "GUNAL RAJA A", "roll": "711523BAM301", "category": "Management"},
         {"name": "PRATHAP P", "roll": "711523BAM302", "category": "Management"},
         {"name": "SABARISHWARAN", "roll": "711523BAM304", "category": "Management"},
@@ -129,7 +160,21 @@ student = next(s for s in st.session_state.students if s["name"] == selected_nam
 st.subheader("👤 Student Profile")
 st.write(student)
 
-fees = get_fees(student["category"])
+# ---------------- MULTI CATEGORY ----------------
+if "categories" in student:
+    categories = student["categories"]
+else:
+    categories = [student["category"]]
+
+fees = {}
+
+for cat in categories:
+    cat_fees = get_fees(cat)
+    for key, value in cat_fees.items():
+        if key in fees:
+            fees[key]["total"] += value["total"]
+        else:
+            fees[key] = value
 
 st.subheader("💰 Fee Structure")
 st.json(fees)
@@ -146,32 +191,55 @@ if uploaded_file:
     img = cv2.imdecode(np_arr, 1)
     pil_img = Image.open(io.BytesIO(file_bytes))
 
-    st.image(img, width="stretch")
+    st.image(img, width=300)
 
     # OCR
     text = pytesseract.image_to_string(img)
     st.subheader("📄 Extracted Text")
     st.text(text)
 
-    # ---------------- AMOUNT DETECTION ----------------
-    amounts = re.findall(r'\d[\d,]*', text)
+    # ---------------- SMART AMOUNT DETECTION ----------------
+    lines = text.split("\n")
+    valid_amounts = []
 
-    clean_amounts = []
-    for amt in amounts:
-        try:
-            val = int(amt.replace(",", ""))
-            if 1000 <= val <= 100000:
-                clean_amounts.append(val)
-        except:
-            pass
+    for line in lines:
+        if "amount" in line.lower() or "total" in line.lower():
+            nums = re.findall(r'\d[\d,]*', line)
+            for n in nums:
+                try:
+                    val = int(n.replace(",", ""))
+                    if 1000 <= val <= 200000:
+                        valid_amounts.append(val)
+                except:
+                    pass
 
-    detected_amount = max(clean_amounts) if clean_amounts else None
+    expected = fees[selected_fee]["total"]
+
+    def find_best_amount(amounts, expected):
+        best = None
+        min_diff = float("inf")
+
+        for amt in amounts:
+            for target in [expected, expected/2]:
+                diff = abs(amt - target)
+                if diff < min_diff:
+                    min_diff = diff
+                    best = amt
+
+        return best
+
+    detected_amount = find_best_amount(valid_amounts, expected)
     st.write("Detected Amount:", detected_amount)
 
-    # ---------------- TXN ID ----------------
-    txn_ids = re.findall(r'(?:UTR|TXN|ID)?[:\s]*([A-Z0-9]{10,})', text)
-    txn_id = txn_ids[0] if txn_ids else "Not Found"
-    st.write("Transaction ID:", txn_id)
+    # ---------------- UPI ID ----------------
+    upi_ids = re.findall(r'[a-zA-Z0-9.\-_]+@[a-zA-Z]+', text)
+
+    if upi_ids:
+        txn_id = upi_ids[0]
+    else:
+        txn_id = "UPI Not Found"
+
+    st.write("UPI ID:", txn_id)
 
     # ---------------- HASH ----------------
     img_hash = str(imagehash.average_hash(pil_img))
@@ -182,15 +250,20 @@ if uploaded_file:
     except:
         hashes = []
 
-    duplicate = img_hash in hashes
+    duplicate = False
+    for h in hashes:
+        if h["hash"] == img_hash and h["roll"] != student["roll"]:
+            duplicate = True
 
     if not duplicate:
-        hashes.append(img_hash)
+        hashes.append({"hash": img_hash, "roll": student["roll"]})
         with open("hashes.json", "w") as f:
             json.dump(hashes, f)
 
     # ---------------- VERIFICATION ----------------
-    expected_amount = fees[selected_fee]
+    fee_info = fees[selected_fee]
+    total_fee = fee_info["total"]
+    fee_type = fee_info["type"]
 
     def is_close(a, b, tol=3000):
         return abs(a - b) <= tol
@@ -201,38 +274,38 @@ if uploaded_file:
         st.error("🚫 Fraud: Duplicate Screenshot")
 
     elif detected_amount is None:
-        st.error("❌ Could not detect amount")
+        st.error("❌ Amount not detected")
 
-    elif detected_amount > expected_amount + 3000:
-        st.error("🚫 Fraud: Overpayment suspicious")
+    elif detected_amount > total_fee + 3000:
+        st.error("🚫 Overpayment suspicious")
 
     else:
-        if is_close(detected_amount, expected_amount):
+        if is_close(detected_amount, total_fee):
             status = "Fully Paid"
             st.success("✅ Full Payment Verified")
-        else:
+
+        elif fee_type == "split" and is_close(detected_amount, total_fee / 2):
             status = "Partially Paid"
+            st.success("✅ Semester Payment Verified")
+
+        else:
+            status = "Partial"
             st.success("✅ Partial Payment Accepted")
 
-        # ---------------- SAVE ----------------
+        # SAVE
         data = {
             "Name": student["name"],
             "Roll": student["roll"],
             "Fee": selected_fee,
             "Amount": detected_amount,
-            "Txn ID": txn_id,
+            "UPI ID": txn_id,
             "Status": status
         }
 
         df = pd.DataFrame([data])
         file_exists = os.path.isfile("records.csv")
 
-        df.to_csv(
-            "records.csv",
-            mode="a",
-            header=not file_exists,
-            index=False
-        )
+        df.to_csv("records.csv", mode="a", header=not file_exists, index=False)
 
 # ---------------- DASHBOARD ----------------
 st.subheader("📊 Mentor Dashboard")
